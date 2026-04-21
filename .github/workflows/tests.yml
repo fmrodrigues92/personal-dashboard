@@ -3,16 +3,12 @@ name: tests
 on:
   push:
     branches:
-      - develop
-      - main
       - master
-      - workos
+      - release
   pull_request:
     branches:
-      - develop
-      - main
       - master
-      - workos
+      - release
 
 jobs:
   ci:
