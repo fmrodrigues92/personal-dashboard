@@ -18,13 +18,14 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class BillingInvoiceController extends Controller
 {
     public function index(
         Request $request,
         ListBillingInvoicesUseCase $useCase,
-    ): JsonResponse|RedirectResponse {
+    ): JsonResponse|InertiaResponse {
         $billingInvoices = $useCase->handle();
 
         if ($this->shouldReturnJson($request)) {
@@ -33,7 +34,9 @@ class BillingInvoiceController extends Controller
             ]);
         }
 
-        return redirect()->route('dashboard');
+        return Inertia::render('billing/index', [
+            'initialInvoices' => $this->serializeCollection($billingInvoices),
+        ]);
     }
 
     public function indexSimulations(
@@ -48,7 +51,7 @@ class BillingInvoiceController extends Controller
             ]);
         }
 
-        return redirect()->route('dashboard');
+        return redirect()->route('billing-invoices.index');
     }
 
     public function store(

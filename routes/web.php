@@ -22,6 +22,7 @@ Route::group([
         'prefix' => 'billing-invoices',
     ], function () {
 
+        Route::get('/', [BillingInvoiceController::class, 'index'])->name('index');
         Route::post('/', [BillingInvoiceController::class, 'store'])->name('store');
         Route::delete('{billingInvoice}', [BillingInvoiceController::class, 'destroy'])->whereNumber('billingInvoice')->name('destroy');
 
