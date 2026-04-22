@@ -38,6 +38,7 @@ Allowed invoice types:
 | Column | Type | Nullable | Notes |
 | --- | --- | --- | --- |
 | `id` | bigint | no | Primary key |
+| `user_id` | foreignId | yes | Owner user during the transition to user-scoped data |
 | `billing_date` | datetime | no | Invoice billing date |
 | `type` | string | no | Allowed values: `national`, `international` |
 | `cnae` | string | yes | Required for real invoices |
@@ -58,6 +59,10 @@ Allowed invoice types:
 - Real invoices must use soft delete
 - Simulated invoices must be physically deleted
 - Batch deletion of simulations must physically remove every row where `is_simulation = true`
+- Every billing invoice must belong to the authenticated user through `user_id`
+- New records created by the application must persist the current authenticated `user_id`
+- Reads, month-based queries, updates, and deletions must be scoped to the current authenticated `user_id`
+- One authenticated user must never be able to read or mutate another user's billing invoices
 - The Laravel Eloquent model must live in `app/Models/BillingInvoice.php`
 - The billing invoice domain entity must be a pure class separated from the Laravel model
 - Repository infrastructure must map the Eloquent model to the domain entity
@@ -90,6 +95,7 @@ Create one real billing invoice.
 
 - This operation creates exactly one row
 - `is_simulation` must be persisted as `false`
+- The current authenticated `user_id` must be persisted on the new row
 - When `type = national`, `amount_usd` and `usd_brl_exchange_rate` must be `null`
 - When `type = international`, `amount_usd` and `usd_brl_exchange_rate` are required
 
@@ -100,6 +106,7 @@ List persisted billing invoices.
 #### Rules
 
 - This operation must return non-deleted billing invoices only
+- This operation must return only invoices owned by the current authenticated user
 - Results must be ordered by `billing_date` descending
 - This operation is required for API consumption
 
@@ -110,6 +117,7 @@ List persisted simulated billing invoices.
 #### Rules
 
 - This operation must return only rows where `is_simulation = true`
+- This operation must return only rows owned by the current authenticated user
 - This operation must return non-deleted rows only
 - Results must be ordered by `billing_date` descending
 
@@ -129,6 +137,7 @@ Create simulated billing invoices in batch using a date range.
 #### Rules
 
 - This operation must always persist `is_simulation = true`
+- The current authenticated `user_id` must be persisted on every generated row
 - This operation must create one row per month within the informed period
 - The generated period is inclusive of the start month and the end month
 - The generated `billing_date` must use the first day of each month at `00:00:00`
@@ -157,6 +166,7 @@ Delete one invoice by `id`.
 
 - If `is_simulation = false`, apply soft delete
 - If `is_simulation = true`, apply physical delete
+- The operation must behave as not found when the invoice does not belong to the current authenticated user
 
 ### 4.6 Delete All Simulations
 
@@ -165,6 +175,7 @@ Delete every simulated invoice.
 #### Rules
 
 - This operation must physically delete all rows where `is_simulation = true`
+- This operation must only affect rows owned by the current authenticated user
 - This operation must not affect rows where `is_simulation = false`
 
 ---
@@ -192,6 +203,7 @@ The same controller must support both response types based on request headers.
 - Return JSON for API requests
 - Return Inertia responses for web requests
 - Response negotiation must be based on request headers
+- Ownership checks must be enforced before mutating or exposing records by identifier
 - Controller business logic is not allowed
 
 ### Current Delivery Scope
@@ -222,11 +234,13 @@ The same controller must support both response types based on request headers.
 - A real international invoice requires `amount_usd` and `usd_brl_exchange_rate`
 - Billing invoices can be listed through the API
 - Simulated billing invoices can be listed through the API
+- Billing invoice responses only include the current authenticated user's records
 - A batch simulation request creates one row per month in the informed range
 - Every batch-generated row is stored with `is_simulation = true`
 - Deleting a real invoice sets `deleted_at`
 - Deleting a simulated invoice removes the row physically
 - Deleting all simulations removes every row with `is_simulation = true`
+- One authenticated user can not read or delete another user's billing invoice records
 - API requests return JSON
 - Web requests are handled by the same controller with Inertia-ready response branching
 

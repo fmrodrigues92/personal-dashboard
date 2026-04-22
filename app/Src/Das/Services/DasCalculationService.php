@@ -28,12 +28,12 @@ class DasCalculationService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function calculateAndPersist(array $data): DasCalculation
+    public function calculateAndPersist(array $data, int $userId): DasCalculation
     {
         $referenceMonth = CarbonImmutable::parse($data['reference_month'])->startOfMonth();
         $currentMonth = CarbonImmutable::now()->startOfMonth();
         $rule = $this->dasCalculationRuleResolver->resolve($data['rule_version'] ?? null);
-        $monthlyInvoices = $this->relevantInvoicesForMonth($referenceMonth, $currentMonth);
+        $monthlyInvoices = $this->relevantInvoicesForMonth($referenceMonth, $currentMonth, $userId);
 
         if ($monthlyInvoices->isEmpty()) {
             throw ValidationException::withMessages([
@@ -41,7 +41,7 @@ class DasCalculationService
             ]);
         }
 
-        $rollingRevenueBreakdown = $this->rollingRevenueBreakdownForMonth($referenceMonth, $currentMonth);
+        $rollingRevenueBreakdown = $this->rollingRevenueBreakdownForMonth($referenceMonth, $currentMonth, $userId);
 
         $factorRApplied = $this->factorREvaluator->passes($referenceMonth);
         $calculatedDas = $rule->calculate(
@@ -57,7 +57,7 @@ class DasCalculationService
             $factorRApplied,
         );
 
-        $this->billingInvoiceRepository->updateCalculationAnnexes($calculatedDas->calculationAnnexesByInvoiceId);
+        $this->billingInvoiceRepository->updateCalculationAnnexes($calculatedDas->calculationAnnexesByInvoiceId, $userId);
 
         $metadata = array_merge(
             $calculatedDas->metadata,
@@ -66,6 +66,7 @@ class DasCalculationService
 
         return $this->dasCalculationRepository->save(
             attributes: [
+                'user_id' => $userId,
                 'reference_month' => $referenceMonth->toDateString(),
                 'rule_version' => $calculatedDas->ruleVersion,
                 'factor_r_applied' => $calculatedDas->factorRApplied,
@@ -91,14 +92,14 @@ class DasCalculationService
     /**
      * @return Collection<int, DasCalculation>
      */
-    public function list(): Collection
+    public function list(int $userId): Collection
     {
-        return $this->dasCalculationRepository->getAll();
+        return $this->dasCalculationRepository->getAll($userId);
     }
 
-    public function show(int $id): DasCalculation
+    public function show(int $id, int $userId): DasCalculation
     {
-        $dasCalculation = $this->dasCalculationRepository->findById($id);
+        $dasCalculation = $this->dasCalculationRepository->findById($id, $userId);
 
         if ($dasCalculation === null) {
             abort(404);
@@ -124,7 +125,7 @@ class DasCalculationService
      * @param  array<string, mixed>  $data
      * @return array<int, array<string, bool|float|int|string|null>>
      */
-    public function timeline(array $data): array
+    public function timeline(array $data, int $userId): array
     {
         $currentMonth = CarbonImmutable::now()->startOfMonth();
         $hasReferenceMonth = array_key_exists('reference_month', $data);
@@ -137,7 +138,7 @@ class DasCalculationService
 
         // For timeline generation, we resolve the rule once using the provided version (or default) and use it for all months.
         $rule = $this->dasCalculationRuleResolver->resolve($data['rule_version'] ?? null);
-        
+
         $items = [];
 
         for ($offset = -$monthsBefore; $offset <= $monthsAfter; $offset++) {
@@ -147,6 +148,7 @@ class DasCalculationService
                 referenceMonth: $month,
                 ruleVersion: $rule->version(),
                 isProjection: $expectedProjection,
+                userId: $userId,
             );
 
             if ($storedCalculation === null) {
@@ -154,11 +156,12 @@ class DasCalculationService
                     referenceMonth: $month,
                     ruleVersion: $rule->version(),
                     isProjection: ! $expectedProjection,
+                    userId: $userId,
                 );
             }
 
             if ($storedCalculation !== null) {
-                $fallback = $this->previewMonth($month, $rule->version(), $currentMonth);
+                $fallback = $this->previewMonth($month, $rule->version(), $currentMonth, $userId);
 
                 $items[] = [
                     'reference_month' => $storedCalculation->referenceMonth->toDateString(),
@@ -177,7 +180,7 @@ class DasCalculationService
                 continue;
             }
 
-            $preview = $this->previewMonth($month, $rule->version(), $currentMonth);
+            $preview = $this->previewMonth($month, $rule->version(), $currentMonth, $userId);
             $items[] = $preview;
         }
 
@@ -191,10 +194,11 @@ class DasCalculationService
         CarbonImmutable $referenceMonth,
         string $ruleVersion,
         CarbonImmutable $currentMonth,
+        int $userId,
     ): array {
         $rule = $this->dasCalculationRuleResolver->resolve($ruleVersion);
-        $monthlyInvoices = $this->relevantInvoicesForMonth($referenceMonth, $currentMonth);
-        $rollingRevenueBreakdown = $this->rollingRevenueBreakdownForMonth($referenceMonth, $currentMonth);
+        $monthlyInvoices = $this->relevantInvoicesForMonth($referenceMonth, $currentMonth, $userId);
+        $rollingRevenueBreakdown = $this->rollingRevenueBreakdownForMonth($referenceMonth, $currentMonth, $userId);
 
         if ($monthlyInvoices->isEmpty()) {
             return [
@@ -247,8 +251,9 @@ class DasCalculationService
     private function relevantInvoicesForMonth(
         CarbonImmutable $referenceMonth,
         CarbonImmutable $currentMonth,
+        int $userId,
     ): Collection {
-        $monthlyInvoices = $this->billingInvoiceRepository->getModelsForMonth($referenceMonth);
+        $monthlyInvoices = $this->billingInvoiceRepository->getModelsForMonth($referenceMonth, $userId);
 
         return $this->filterInvoicesForMonthWindow(
             invoices: $monthlyInvoices,
@@ -263,11 +268,13 @@ class DasCalculationService
     private function rollingRevenueBreakdownForMonth(
         CarbonImmutable $referenceMonth,
         CarbonImmutable $currentMonth,
+        int $userId,
     ): array {
-        $monthlyInvoices = $this->relevantInvoicesForMonth($referenceMonth, $currentMonth);
+        $monthlyInvoices = $this->relevantInvoicesForMonth($referenceMonth, $currentMonth, $userId);
         $rollingInvoices = $this->billingInvoiceRepository->getModelsForPeriod(
             $referenceMonth->subMonths(12)->startOfMonth(),
             $referenceMonth->subMonths(1)->endOfMonth(),
+            $userId,
         );
         $filteredInvoices = $this->filterInvoicesForRollingWindow($rollingInvoices, $currentMonth);
         $allKnownInvoices = $filteredInvoices

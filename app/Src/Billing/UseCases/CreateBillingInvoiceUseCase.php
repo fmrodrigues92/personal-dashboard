@@ -14,8 +14,8 @@ class CreateBillingInvoiceUseCase
     /**
      * @param  array<string, mixed>  $data
      */
-    public function handle(array $data): BillingInvoice
+    public function handle(array $data, int $userId): BillingInvoice
     {
-        return $this->billingInvoiceService->createRealInvoice($data);
+        return $this->billingInvoiceService->createRealInvoice($data, $userId);
     }
 }

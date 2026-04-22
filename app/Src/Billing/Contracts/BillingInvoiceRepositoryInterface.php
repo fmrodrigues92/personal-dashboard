@@ -23,31 +23,31 @@ interface BillingInvoiceRepositoryInterface
     /**
      * @return Collection<int, BillingInvoice>
      */
-    public function getAll(): Collection;
+    public function getAll(int $userId): Collection;
 
     /**
      * @return Collection<int, BillingInvoice>
      */
-    public function getSimulations(): Collection;
+    public function getSimulations(int $userId): Collection;
 
     /**
      * @return Collection<int, BillingInvoiceModel>
      */
-    public function getModelsForMonth(CarbonImmutable $referenceMonth): Collection;
+    public function getModelsForMonth(CarbonImmutable $referenceMonth, int $userId): Collection;
 
     /**
      * @return Collection<int, BillingInvoiceModel>
      */
-    public function getModelsForPeriod(CarbonImmutable $startDate, CarbonImmutable $endDate): Collection;
+    public function getModelsForPeriod(CarbonImmutable $startDate, CarbonImmutable $endDate, int $userId): Collection;
 
     /**
      * @param  array<int, int>  $calculationAnnexesById
      */
-    public function updateCalculationAnnexes(array $calculationAnnexesById): void;
+    public function updateCalculationAnnexes(array $calculationAnnexesById, int $userId): void;
 
     public function delete(BillingInvoiceModel $billingInvoice): ?bool;
 
     public function forceDelete(BillingInvoiceModel $billingInvoice): ?bool;
 
-    public function forceDeleteSimulations(): int;
+    public function forceDeleteSimulations(int $userId): int;
 }

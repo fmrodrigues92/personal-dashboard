@@ -14,8 +14,8 @@ class GetDasTimelineUseCase
      * @param  array<string, mixed>  $data
      * @return array<int, array<string, bool|float|int|string|null>>
      */
-    public function handle(array $data): array
+    public function handle(array $data, int $userId): array
     {
-        return $this->dasCalculationService->timeline($data);
+        return $this->dasCalculationService->timeline($data, $userId);
     }
 }

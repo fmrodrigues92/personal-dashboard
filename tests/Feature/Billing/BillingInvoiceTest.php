@@ -146,6 +146,24 @@ test('authenticated users can create billing invoice simulations in batch throug
     ]);
 });
 
+test('authenticated users can only list their own billing invoices through the api', function () {
+    BillingInvoice::query()->create(realBillingInvoiceAttributes([
+        'customer_external_id' => 'cust_owned',
+    ]));
+
+    BillingInvoice::query()->create(realBillingInvoiceAttributes([
+        'user_id' => User::factory()->create()->id,
+        'customer_external_id' => 'cust_other',
+    ]));
+
+    $response = $this->getJson(route('api.billing-invoices.index'));
+
+    $response
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.customer_external_id', 'cust_owned');
+});
+
 test('authenticated users can list billing invoices through the api', function () {
     BillingInvoice::query()->create(realBillingInvoiceAttributes([
         'billing_date' => '2026-02-01 00:00:00',
@@ -214,6 +232,19 @@ test('deleting a simulated billing invoice removes it physically', function () {
     $this->assertDatabaseCount('billing_invoices', 0);
 });
 
+test('users can not delete billing invoices that belong to another user', function () {
+    $billingInvoice = BillingInvoice::query()->create(realBillingInvoiceAttributes([
+        'user_id' => User::factory()->create()->id,
+    ]));
+
+    $response = deleteJson(route('api.billing-invoices.destroy', $billingInvoice));
+
+    $response->assertNotFound();
+    $this->assertDatabaseHas('billing_invoices', [
+        'id' => $billingInvoice->id,
+    ]);
+});
+
 test('deleting all simulations removes only simulated billing invoices', function () {
     BillingInvoice::query()->create(simulatedBillingInvoiceAttributes([
         'billing_date' => '2026-01-01 00:00:00',
@@ -246,6 +277,7 @@ test('deleting all simulations removes only simulated billing invoices', functio
 function realBillingInvoiceAttributes(array $overrides = []): array
 {
     return array_merge([
+        'user_id' => auth()->id(),
         'billing_date' => '2026-04-10 15:30:00',
         'type' => 'national',
         'cnae' => '6201500',
@@ -267,6 +299,7 @@ function realBillingInvoiceAttributes(array $overrides = []): array
 function simulatedBillingInvoiceAttributes(array $overrides = []): array
 {
     return array_merge([
+        'user_id' => auth()->id(),
         'billing_date' => '2026-01-01 00:00:00',
         'type' => 'national',
         'cnae' => null,

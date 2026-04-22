@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DasCalculation extends Model
@@ -11,6 +12,7 @@ class DasCalculation extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'reference_month',
         'rule_version',
         'factor_r_applied',
@@ -26,6 +28,7 @@ class DasCalculation extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
             'reference_month' => 'immutable_date',
             'factor_r_applied' => 'boolean',
             'monthly_revenue_brl' => 'float',
@@ -35,6 +38,14 @@ class DasCalculation extends Model
             'created_at' => 'immutable_datetime',
             'updated_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**

@@ -10,8 +10,8 @@ class DeleteBillingInvoiceSimulationsUseCase
         private readonly BillingInvoiceService $billingInvoiceService,
     ) {}
 
-    public function handle(): int
+    public function handle(int $userId): int
     {
-        return $this->billingInvoiceService->deleteSimulations();
+        return $this->billingInvoiceService->deleteSimulations($userId);
     }
 }

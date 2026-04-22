@@ -21,6 +21,7 @@ beforeEach(function (): void {
 
 test('authenticated users can calculate das for a month using the 2018 rule', function () {
     BillingInvoice::query()->create([
+        'user_id' => $this->user->id,
         'billing_date' => '2026-04-10 10:00:00',
         'type' => 'national',
         'cnae' => '6201500',
@@ -35,6 +36,7 @@ test('authenticated users can calculate das for a month using the 2018 rule', fu
     ]);
 
     BillingInvoice::query()->create([
+        'user_id' => $this->user->id,
         'billing_date' => '2026-04-15 10:00:00',
         'type' => 'international',
         'cnae' => '6202300',
@@ -91,6 +93,7 @@ test('past month das calculations ignore simulation invoices', function () {
     $pastMonth = now()->startOfMonth()->subMonth();
 
     BillingInvoice::query()->create([
+        'user_id' => $this->user->id,
         'billing_date' => $pastMonth->copy()->day(10)->format('Y-m-d H:i:s'),
         'type' => 'national',
         'cnae' => '6201500',
@@ -105,6 +108,7 @@ test('past month das calculations ignore simulation invoices', function () {
     ]);
 
     BillingInvoice::query()->create([
+        'user_id' => $this->user->id,
         'billing_date' => $pastMonth->copy()->day(15)->format('Y-m-d H:i:s'),
         'type' => 'national',
         'cnae' => null,
@@ -131,6 +135,7 @@ test('past month das calculations ignore simulation invoices', function () {
 
 test('initial activity uses proportionalized rbt12 for the first month', function () {
     BillingInvoice::query()->create([
+        'user_id' => $this->user->id,
         'billing_date' => '2026-04-10 10:00:00',
         'type' => 'national',
         'cnae' => '6201500',
@@ -158,6 +163,7 @@ test('initial activity uses proportionalized rbt12 for the first month', functio
 
 test('initial activity with only international revenue does not break accounting scenario', function () {
     BillingInvoice::query()->create([
+        'user_id' => $this->user->id,
         'billing_date' => '2026-04-10 10:00:00',
         'type' => 'international',
         'cnae' => '6201500',
@@ -185,6 +191,7 @@ test('initial activity with only international revenue does not break accounting
 
 test('authenticated users can list das calculations through the api', function () {
     $dasCalculation = DasCalculation::query()->create([
+        'user_id' => $this->user->id,
         'reference_month' => '2026-04-01',
         'rule_version' => 'simples_nacional_service_2018',
         'factor_r_applied' => true,
@@ -214,6 +221,7 @@ test('authenticated users can list das calculations through the api', function (
 
 test('authenticated users can show one das calculation through the api', function () {
     $dasCalculation = DasCalculation::query()->create([
+        'user_id' => $this->user->id,
         'reference_month' => '2026-04-01',
         'rule_version' => 'simples_nacional_service_2018',
         'factor_r_applied' => true,
@@ -242,6 +250,7 @@ test('authenticated users can show one das calculation through the api', functio
 
 test('authenticated users can correct a das tax breakdown amount', function () {
     $dasCalculation = DasCalculation::query()->create([
+        'user_id' => $this->user->id,
         'reference_month' => '2026-04-01',
         'rule_version' => 'simples_nacional_service_2018',
         'factor_r_applied' => true,
@@ -273,6 +282,7 @@ test('authenticated users can correct a das tax breakdown amount', function () {
 
 test('projected das calculations can not receive manual corrections', function () {
     $dasCalculation = DasCalculation::query()->create([
+        'user_id' => $this->user->id,
         'reference_month' => '2027-04-01',
         'rule_version' => 'simples_nacional_service_2018',
         'factor_r_applied' => true,
@@ -304,6 +314,7 @@ test('authenticated users can get the das timeline', function () {
     $currentMonth = now()->startOfMonth();
 
     DasCalculation::query()->create([
+        'user_id' => $this->user->id,
         'reference_month' => $currentMonth->toDateString(),
         'rule_version' => 'simples_nacional_service_2018',
         'factor_r_applied' => true,
@@ -314,6 +325,7 @@ test('authenticated users can get the das timeline', function () {
     ]);
 
     BillingInvoice::query()->create([
+        'user_id' => $this->user->id,
         'billing_date' => $currentMonth->addMonth()->day(10)->format('Y-m-d H:i:s'),
         'type' => 'national',
         'cnae' => null,
@@ -345,6 +357,7 @@ test('timeline returns only the requested month when reference_month is provided
     $currentMonth = now()->startOfMonth();
 
     DasCalculation::query()->create([
+        'user_id' => $this->user->id,
         'reference_month' => $currentMonth->toDateString(),
         'rule_version' => 'simples_nacional_service_2018',
         'factor_r_applied' => true,
@@ -363,4 +376,52 @@ test('timeline returns only the requested month when reference_month is provided
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.reference_month', $currentMonth->toDateString())
         ->assertJsonPath('data.0.das_total_brl', 600);
+});
+
+test('authenticated users can only list their own das calculations', function () {
+    DasCalculation::query()->create([
+        'user_id' => $this->user->id,
+        'reference_month' => '2026-04-01',
+        'rule_version' => 'simples_nacional_service_2018',
+        'factor_r_applied' => true,
+        'monthly_revenue_brl' => 10000.00,
+        'das_total_brl' => 600.00,
+        'is_projection' => false,
+        'metadata' => ['invoice_count' => 1],
+    ]);
+
+    DasCalculation::query()->create([
+        'user_id' => User::factory()->create()->id,
+        'reference_month' => '2026-05-01',
+        'rule_version' => 'simples_nacional_service_2018',
+        'factor_r_applied' => true,
+        'monthly_revenue_brl' => 20000.00,
+        'das_total_brl' => 1200.00,
+        'is_projection' => false,
+        'metadata' => ['invoice_count' => 1],
+    ]);
+
+    $response = $this->getJson(route('api.das-calculations.index'));
+
+    $response
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.monthly_revenue_brl', 10000);
+});
+
+test('users can not show das calculations that belong to another user', function () {
+    $dasCalculation = DasCalculation::query()->create([
+        'user_id' => User::factory()->create()->id,
+        'reference_month' => '2026-04-01',
+        'rule_version' => 'simples_nacional_service_2018',
+        'factor_r_applied' => true,
+        'monthly_revenue_brl' => 10000.00,
+        'das_total_brl' => 600.00,
+        'is_projection' => false,
+        'metadata' => ['invoice_count' => 1],
+    ]);
+
+    $response = $this->getJson(route('api.das-calculations.show', $dasCalculation->id));
+
+    $response->assertNotFound();
 });

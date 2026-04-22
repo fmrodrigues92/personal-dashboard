@@ -26,7 +26,7 @@ class BillingInvoiceController extends Controller
         Request $request,
         ListBillingInvoicesUseCase $useCase,
     ): JsonResponse|InertiaResponse {
-        $billingInvoices = $useCase->handle();
+        $billingInvoices = $useCase->handle($this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -43,7 +43,7 @@ class BillingInvoiceController extends Controller
         Request $request,
         ListBillingInvoiceSimulationsUseCase $useCase,
     ): JsonResponse|RedirectResponse {
-        $billingInvoices = $useCase->handle();
+        $billingInvoices = $useCase->handle($this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -58,7 +58,7 @@ class BillingInvoiceController extends Controller
         StoreBillingInvoiceRequest $request,
         CreateBillingInvoiceUseCase $useCase,
     ): JsonResponse|RedirectResponse {
-        $billingInvoice = $useCase->handle($request->validated());
+        $billingInvoice = $useCase->handle($request->validated(), $this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -78,7 +78,7 @@ class BillingInvoiceController extends Controller
         StoreBillingInvoiceSimulationRequest $request,
         CreateBillingInvoiceSimulationsUseCase $useCase,
     ): JsonResponse|RedirectResponse {
-        $billingInvoices = $useCase->handle($request->validated())->values();
+        $billingInvoices = $useCase->handle($request->validated(), $this->currentUserId($request))->values();
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -104,6 +104,7 @@ class BillingInvoiceController extends Controller
         BillingInvoiceModel $billingInvoice,
         DeleteBillingInvoiceUseCase $useCase,
     ): JsonResponse|RedirectResponse {
+        $this->ensureOwnsBillingInvoice($request, $billingInvoice);
         $useCase->handle($billingInvoice);
 
         if ($this->shouldReturnJson($request)) {
@@ -124,7 +125,7 @@ class BillingInvoiceController extends Controller
         Request $request,
         DeleteBillingInvoiceSimulationsUseCase $useCase,
     ): JsonResponse|RedirectResponse {
-        $deletedCount = $useCase->handle();
+        $deletedCount = $useCase->handle($this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -146,6 +147,16 @@ class BillingInvoiceController extends Controller
     protected function shouldReturnJson(Request $request): bool
     {
         return $request->expectsJson() || $request->wantsJson();
+    }
+
+    protected function currentUserId(Request $request): int
+    {
+        return (int) $request->user()->id;
+    }
+
+    protected function ensureOwnsBillingInvoice(Request $request, BillingInvoiceModel $billingInvoice): void
+    {
+        abort_unless($billingInvoice->user_id === $this->currentUserId($request), 404);
     }
 
     /**

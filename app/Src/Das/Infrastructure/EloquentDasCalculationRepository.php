@@ -18,6 +18,7 @@ class EloquentDasCalculationRepository implements DasCalculationRepositoryInterf
     public function save(array $attributes, array $taxBreakdowns): DasCalculation
     {
         $dasCalculation = $this->model->newQuery()->firstOrNew([
+            'user_id' => $attributes['user_id'],
             'reference_month' => $attributes['reference_month'],
             'rule_version' => $attributes['rule_version'],
             'is_projection' => $attributes['is_projection'],
@@ -33,10 +34,11 @@ class EloquentDasCalculationRepository implements DasCalculationRepositoryInterf
         return DasCalculation::fromModel($dasCalculation);
     }
 
-    public function getAll(): Collection
+    public function getAll(int $userId): Collection
     {
         $data = $this->model
             ->newQuery()
+            ->where('user_id', $userId)
             ->with('taxBreakdowns')
             ->orderByDesc('reference_month')
             ->get()
@@ -45,11 +47,12 @@ class EloquentDasCalculationRepository implements DasCalculationRepositoryInterf
         return $data;
     }
 
-    public function findById(int $id): ?DasCalculation
+    public function findById(int $id, int $userId): ?DasCalculation
     {
         $dasCalculation = $this->model
             ->newQuery()
             ->with('taxBreakdowns')
+            ->where('user_id', $userId)
             ->find($id);
 
         return $dasCalculation === null ? null : DasCalculation::fromModel($dasCalculation);
@@ -59,10 +62,12 @@ class EloquentDasCalculationRepository implements DasCalculationRepositoryInterf
         CarbonImmutable $referenceMonth,
         string $ruleVersion,
         bool $isProjection,
+        int $userId,
     ): ?DasCalculation {
         $dasCalculation = $this->model
             ->newQuery()
             ->with('taxBreakdowns')
+            ->where('user_id', $userId)
             ->whereDate('reference_month', $referenceMonth->toDateString())
             ->where('rule_version', $ruleVersion)
             ->where('is_projection', $isProjection)

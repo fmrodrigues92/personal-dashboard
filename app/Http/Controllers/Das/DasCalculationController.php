@@ -28,7 +28,7 @@ class DasCalculationController extends Controller
         GetDasTimelineUseCase $useCase,
     ): JsonResponse|InertiaResponse {
         $filters = $request->validated();
-        $items = $useCase->handle($filters);
+        $items = $useCase->handle($filters, $this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -56,7 +56,7 @@ class DasCalculationController extends Controller
         Request $request,
         ListDasCalculationsUseCase $useCase,
     ): JsonResponse|RedirectResponse {
-        $dasCalculations = $useCase->handle();
+        $dasCalculations = $useCase->handle($this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -72,7 +72,7 @@ class DasCalculationController extends Controller
         int $dasCalculation,
         ShowDasCalculationUseCase $useCase,
     ): JsonResponse|RedirectResponse {
-        $storedDasCalculation = $useCase->handle($dasCalculation);
+        $storedDasCalculation = $useCase->handle($dasCalculation, $this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -87,7 +87,7 @@ class DasCalculationController extends Controller
         StoreDasCalculationRequest $request,
         CalculateDasUseCase $useCase,
     ): JsonResponse|RedirectResponse {
-        $dasCalculation = $useCase->handle($request->validated());
+        $dasCalculation = $useCase->handle($request->validated(), $this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -107,7 +107,7 @@ class DasCalculationController extends Controller
         DasTimelineRequest $request,
         GetDasTimelineUseCase $useCase,
     ): JsonResponse|RedirectResponse {
-        $items = $useCase->handle($request->validated());
+        $items = $useCase->handle($request->validated(), $this->currentUserId($request));
 
         if ($this->shouldReturnJson($request)) {
             return response()->json([
@@ -123,6 +123,7 @@ class DasCalculationController extends Controller
         DasCalculationTaxBreakdownModel $taxBreakdown,
         UpdateDasTaxBreakdownUseCase $useCase,
     ): JsonResponse|RedirectResponse {
+        $this->ensureOwnsTaxBreakdown($request, $taxBreakdown);
         $dasCalculation = $useCase->handle(
             $taxBreakdown,
             (float) $request->validated('adjusted_amount_brl'),
@@ -145,6 +146,16 @@ class DasCalculationController extends Controller
     protected function shouldReturnJson(Request $request): bool
     {
         return $request->expectsJson() || $request->wantsJson();
+    }
+
+    protected function currentUserId(Request $request): int
+    {
+        return (int) $request->user()->id;
+    }
+
+    protected function ensureOwnsTaxBreakdown(Request $request, DasCalculationTaxBreakdownModel $taxBreakdown): void
+    {
+        abort_unless($taxBreakdown->dasCalculation->user_id === $this->currentUserId($request), 404);
     }
 
     /**

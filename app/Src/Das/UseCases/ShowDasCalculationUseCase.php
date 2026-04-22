@@ -11,8 +11,8 @@ class ShowDasCalculationUseCase
         private readonly DasCalculationService $dasCalculationService,
     ) {}
 
-    public function handle(int $id): DasCalculation
+    public function handle(int $id, int $userId): DasCalculation
     {
-        return $this->dasCalculationService->show($id);
+        return $this->dasCalculationService->show($id, $userId);
     }
 }

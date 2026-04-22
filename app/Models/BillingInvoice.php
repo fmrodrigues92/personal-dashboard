@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BillingInvoice extends Model
@@ -13,6 +14,7 @@ class BillingInvoice extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'billing_date',
         'type',
         'cnae',
@@ -32,6 +34,7 @@ class BillingInvoice extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
             'billing_date' => 'immutable_datetime',
             'amount_brl' => 'float',
             'amount_usd' => 'float',
@@ -39,5 +42,13 @@ class BillingInvoice extends Model
             'is_simulation' => 'boolean',
             'deleted_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

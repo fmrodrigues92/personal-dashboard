@@ -27,47 +27,52 @@ class EloquentBillingInvoiceRepository implements BillingInvoiceRepositoryInterf
             ->map(fn (array $attributes): BillingInvoice => $this->create($attributes));
     }
 
-    public function getAll(): Collection
+    public function getAll(int $userId): Collection
     {
         return $this->model
             ->newQuery()
+            ->where('user_id', $userId)
             ->orderByDesc('billing_date')
             ->get()
             ->map(fn (BillingInvoiceModel $billingInvoice): BillingInvoice => BillingInvoice::fromModel($billingInvoice));
     }
 
-    public function getSimulations(): Collection
+    public function getSimulations(int $userId): Collection
     {
         return $this->model
             ->newQuery()
+            ->where('user_id', $userId)
             ->where('is_simulation', true)
             ->orderByDesc('billing_date')
             ->get()
             ->map(fn (BillingInvoiceModel $billingInvoice): BillingInvoice => BillingInvoice::fromModel($billingInvoice));
     }
 
-    public function getModelsForMonth(CarbonImmutable $referenceMonth): Collection
+    public function getModelsForMonth(CarbonImmutable $referenceMonth, int $userId): Collection
     {
         return $this->getModelsForPeriod(
             $referenceMonth->startOfMonth(),
             $referenceMonth->endOfMonth(),
+            $userId,
         );
     }
 
-    public function getModelsForPeriod(CarbonImmutable $startDate, CarbonImmutable $endDate): Collection
+    public function getModelsForPeriod(CarbonImmutable $startDate, CarbonImmutable $endDate, int $userId): Collection
     {
         return $this->model
             ->newQuery()
+            ->where('user_id', $userId)
             ->whereBetween('billing_date', [$startDate, $endDate])
             ->orderBy('billing_date')
             ->get();
     }
 
-    public function updateCalculationAnnexes(array $calculationAnnexesById): void
+    public function updateCalculationAnnexes(array $calculationAnnexesById, int $userId): void
     {
         foreach ($calculationAnnexesById as $billingInvoiceId => $calculationAnnex) {
             $this->model
                 ->newQuery()
+                ->where('user_id', $userId)
                 ->whereKey($billingInvoiceId)
                 ->update([
                     'cnae_calculation' => $calculationAnnex,
@@ -85,11 +90,12 @@ class EloquentBillingInvoiceRepository implements BillingInvoiceRepositoryInterf
         return $billingInvoice->forceDelete();
     }
 
-    public function forceDeleteSimulations(): int
+    public function forceDeleteSimulations(int $userId): int
     {
         return $this->model
             ->newQuery()
             ->withTrashed()
+            ->where('user_id', $userId)
             ->where('is_simulation', true)
             ->forceDelete();
     }

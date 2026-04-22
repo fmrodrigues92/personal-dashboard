@@ -18,14 +18,15 @@ interface DasCalculationRepositoryInterface
     /**
      * @return Collection<int, DasCalculation>
      */
-    public function getAll(): Collection;
+    public function getAll(int $userId): Collection;
 
-    public function findById(int $id): ?DasCalculation;
+    public function findById(int $id, int $userId): ?DasCalculation;
 
     public function findStoredForMonth(
         CarbonImmutable $referenceMonth,
         string $ruleVersion,
         bool $isProjection,
+        int $userId,
     ): ?DasCalculation;
 
     public function updateTaxBreakdown(

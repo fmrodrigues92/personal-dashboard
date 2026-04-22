@@ -11,8 +11,8 @@ class ListDasCalculationsUseCase
         private readonly DasCalculationService $dasCalculationService,
     ) {}
 
-    public function handle(): Collection
+    public function handle(int $userId): Collection
     {
-        return $this->dasCalculationService->list();
+        return $this->dasCalculationService->list($userId);
     }
 }

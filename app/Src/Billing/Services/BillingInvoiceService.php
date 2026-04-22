@@ -17,11 +17,12 @@ class BillingInvoiceService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function createRealInvoice(array $data): BillingInvoice
+    public function createRealInvoice(array $data, int $userId): BillingInvoice
     {
         $isInternational = $data['type'] === 'international';
 
         return $this->billingInvoiceRepository->create([
+            'user_id' => $userId,
             'billing_date' => $data['billing_date'],
             'type' => $data['type'],
             'cnae' => $data['cnae'],
@@ -40,7 +41,7 @@ class BillingInvoiceService
      * @param  array<string, mixed>  $data
      * @return Collection<int, BillingInvoice>
      */
-    public function createSimulations(array $data): Collection
+    public function createSimulations(array $data, int $userId): Collection
     {
         $startDate = CarbonImmutable::parse($data['start_date'])->startOfMonth()->startOfDay();
         $endDate = CarbonImmutable::parse($data['end_date'])->startOfMonth()->startOfDay();
@@ -48,6 +49,7 @@ class BillingInvoiceService
 
         for ($billingDate = $startDate; $billingDate->lessThanOrEqualTo($endDate); $billingDate = $billingDate->addMonth()) {
             $records[] = [
+                'user_id' => $userId,
                 'billing_date' => $billingDate,
                 'type' => $data['type'],
                 'cnae' => null,
@@ -68,17 +70,17 @@ class BillingInvoiceService
     /**
      * @return Collection<int, BillingInvoice>
      */
-    public function listInvoices(): Collection
+    public function listInvoices(int $userId): Collection
     {
-        return $this->billingInvoiceRepository->getAll();
+        return $this->billingInvoiceRepository->getAll($userId);
     }
 
     /**
      * @return Collection<int, BillingInvoice>
      */
-    public function listSimulations(): Collection
+    public function listSimulations(int $userId): Collection
     {
-        return $this->billingInvoiceRepository->getSimulations();
+        return $this->billingInvoiceRepository->getSimulations($userId);
     }
 
     public function delete(BillingInvoiceModel $billingInvoice): void
@@ -92,8 +94,8 @@ class BillingInvoiceService
         $this->billingInvoiceRepository->delete($billingInvoice);
     }
 
-    public function deleteSimulations(): int
+    public function deleteSimulations(int $userId): int
     {
-        return $this->billingInvoiceRepository->forceDeleteSimulations();
+        return $this->billingInvoiceRepository->forceDeleteSimulations($userId);
     }
 }

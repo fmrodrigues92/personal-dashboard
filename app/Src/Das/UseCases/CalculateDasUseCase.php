@@ -14,8 +14,8 @@ class CalculateDasUseCase
     /**
      * @param  array<string, mixed>  $data
      */
-    public function handle(array $data): DasCalculation
+    public function handle(array $data, int $userId): DasCalculation
     {
-        return $this->dasCalculationService->calculateAndPersist($data);
+        return $this->dasCalculationService->calculateAndPersist($data, $userId);
     }
 }

@@ -11,8 +11,8 @@ class ListBillingInvoiceSimulationsUseCase
         private readonly BillingInvoiceService $billingInvoiceService,
     ) {}
 
-    public function handle(): Collection
+    public function handle(int $userId): Collection
     {
-        return $this->billingInvoiceService->listSimulations();
+        return $this->billingInvoiceService->listSimulations($userId);
     }
 }
