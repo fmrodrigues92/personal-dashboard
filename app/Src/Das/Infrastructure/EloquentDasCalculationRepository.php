@@ -35,12 +35,14 @@ class EloquentDasCalculationRepository implements DasCalculationRepositoryInterf
 
     public function getAll(): Collection
     {
-        return $this->model
+        $data = $this->model
             ->newQuery()
             ->with('taxBreakdowns')
             ->orderByDesc('reference_month')
             ->get()
             ->map(fn (DasCalculationModel $dasCalculation): DasCalculation => DasCalculation::fromModel($dasCalculation));
+
+        return $data;
     }
 
     public function findById(int $id): ?DasCalculation

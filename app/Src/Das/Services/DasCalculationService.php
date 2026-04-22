@@ -126,6 +126,7 @@ class DasCalculationService
      */
     public function timeline(array $data): array
     {
+        $currentMonth = CarbonImmutable::now()->startOfMonth();
         $hasReferenceMonth = array_key_exists('reference_month', $data);
         $referenceMonth = isset($data['reference_month'])
             ? CarbonImmutable::parse($data['reference_month'])->startOfMonth()
@@ -133,8 +134,10 @@ class DasCalculationService
 
         $monthsBefore = (int) ($data['months_before'] ?? ($hasReferenceMonth ? 0 : 12));
         $monthsAfter = (int) ($data['months_after'] ?? ($hasReferenceMonth ? 0 : 12));
+
+        // For timeline generation, we resolve the rule once using the provided version (or default) and use it for all months.
         $rule = $this->dasCalculationRuleResolver->resolve($data['rule_version'] ?? null);
-        $currentMonth = CarbonImmutable::now()->startOfMonth();
+        
         $items = [];
 
         for ($offset = -$monthsBefore; $offset <= $monthsAfter; $offset++) {
@@ -225,14 +228,14 @@ class DasCalculationService
 
         return [
             'reference_month' => $referenceMonth->toDateString(),
-            'das_total_brl' => $calculatedDas->dasTotalBrl,
             'monthly_revenue_brl' => $calculatedDas->monthlyRevenueBrl,
-            'is_projection' => $calculatedDas->isProjection || $referenceMonth->greaterThan($currentMonth),
-            'rule_version' => $calculatedDas->ruleVersion,
-            'das_calculation_id' => null,
             'rbt12_national_brl' => $rollingRevenueBreakdown['national_brl'],
             'rbt12_international_brl' => $rollingRevenueBreakdown['international_brl'],
             'rbt12_total_brl' => $rollingRevenueBreakdown['total_brl'],
+            'is_projection' => $calculatedDas->isProjection || $referenceMonth->greaterThan($currentMonth),
+            'rule_version' => $calculatedDas->ruleVersion,
+            'das_calculation_id' => null,
+            'das_total_brl' => $calculatedDas->dasTotalBrl,
             'das_real' => $this->serializeCalculatedScenario($calculatedDas, $rollingRevenueBreakdown['total_brl']),
             'das_contabilidade' => $this->serializeCalculatedScenario($accountingDas, $rollingRevenueBreakdown['national_brl']),
         ];
