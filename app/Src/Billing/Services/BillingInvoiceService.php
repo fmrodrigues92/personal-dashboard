@@ -26,7 +26,7 @@ class BillingInvoiceService
             'type' => $data['type'],
             'cnae' => $data['cnae'],
             'cnae_annex' => $data['cnae_annex'],
-            'cnae_calculation' => $data['cnae_calculation'],
+            'cnae_calculation' => null,
             'customer_name' => $data['customer_name'],
             'customer_external_id' => $data['customer_external_id'],
             'amount_brl' => $data['amount_brl'],

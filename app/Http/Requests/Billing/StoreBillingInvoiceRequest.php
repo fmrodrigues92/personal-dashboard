@@ -22,7 +22,7 @@ class StoreBillingInvoiceRequest extends FormRequest
             'type' => ['required', 'string', Rule::in(['national', 'international'])],
             'cnae' => ['required', 'string', 'max:255'],
             'cnae_annex' => ['required', 'integer'],
-            'cnae_calculation' => ['nullable', 'integer'],
+            'cnae_calculation' => ['prohibited'],
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_external_id' => ['nullable', 'string', 'max:255'],
             'amount_brl' => ['required', 'numeric', 'gt:0'],

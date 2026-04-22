@@ -4,6 +4,10 @@ namespace App\Providers;
 
 use App\Src\Billing\Contracts\BillingInvoiceRepositoryInterface;
 use App\Src\Billing\Infrastructure\EloquentBillingInvoiceRepository;
+use App\Src\Das\Contracts\DasCalculationRepositoryInterface;
+use App\Src\Das\Infrastructure\EloquentDasCalculationRepository;
+use App\Src\Das\Rules\AlwaysTrueFactorREvaluator;
+use App\Src\Das\Rules\Contracts\FactorREvaluatorInterface;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +24,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             BillingInvoiceRepositoryInterface::class,
             EloquentBillingInvoiceRepository::class,
+        );
+        $this->app->bind(
+            DasCalculationRepositoryInterface::class,
+            EloquentDasCalculationRepository::class,
+        );
+        $this->app->bind(
+            FactorREvaluatorInterface::class,
+            AlwaysTrueFactorREvaluator::class,
         );
     }
 

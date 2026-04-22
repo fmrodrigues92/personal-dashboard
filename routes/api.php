@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Billing\BillingInvoiceController;
+use App\Http\Controllers\Das\DasCalculationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -31,5 +32,17 @@ Route::group([
         Route::get('simulations', [BillingInvoiceController::class, 'indexSimulations'])->name('simulations.index');
         Route::post('simulations', [BillingInvoiceController::class, 'storeSimulations'])->name('simulations.store');
         Route::delete('simulations', [BillingInvoiceController::class, 'destroySimulations'])->name('simulations.destroy');
+    });
+
+    Route::group([
+        'as' => 'das-calculations.',
+        'prefix' => 'das-calculations',
+    ], function () {
+
+        Route::get('timeline', [DasCalculationController::class, 'timeline'])->name('timeline');
+        Route::patch('tax-breakdowns/{taxBreakdown}', [DasCalculationController::class, 'updateTaxBreakdown'])->whereNumber('taxBreakdown')->name('tax-breakdowns.update');
+        Route::get('/', [DasCalculationController::class, 'index'])->name('index');
+        Route::post('/', [DasCalculationController::class, 'store'])->name('store');
+        Route::get('{dasCalculation}', [DasCalculationController::class, 'show'])->whereNumber('dasCalculation')->name('show');
     });
 });

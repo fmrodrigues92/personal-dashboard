@@ -5,6 +5,7 @@ namespace App\Src\Billing\Infrastructure;
 use App\Models\BillingInvoice as BillingInvoiceModel;
 use App\Src\Billing\Contracts\BillingInvoiceRepositoryInterface;
 use App\Src\Billing\Domain\BillingInvoice;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 class EloquentBillingInvoiceRepository implements BillingInvoiceRepositoryInterface
@@ -43,6 +44,35 @@ class EloquentBillingInvoiceRepository implements BillingInvoiceRepositoryInterf
             ->orderByDesc('billing_date')
             ->get()
             ->map(fn (BillingInvoiceModel $billingInvoice): BillingInvoice => BillingInvoice::fromModel($billingInvoice));
+    }
+
+    public function getModelsForMonth(CarbonImmutable $referenceMonth): Collection
+    {
+        return $this->getModelsForPeriod(
+            $referenceMonth->startOfMonth(),
+            $referenceMonth->endOfMonth(),
+        );
+    }
+
+    public function getModelsForPeriod(CarbonImmutable $startDate, CarbonImmutable $endDate): Collection
+    {
+        return $this->model
+            ->newQuery()
+            ->whereBetween('billing_date', [$startDate, $endDate])
+            ->orderBy('billing_date')
+            ->get();
+    }
+
+    public function updateCalculationAnnexes(array $calculationAnnexesById): void
+    {
+        foreach ($calculationAnnexesById as $billingInvoiceId => $calculationAnnex) {
+            $this->model
+                ->newQuery()
+                ->whereKey($billingInvoiceId)
+                ->update([
+                    'cnae_calculation' => $calculationAnnex,
+                ]);
+        }
     }
 
     public function delete(BillingInvoiceModel $billingInvoice): ?bool

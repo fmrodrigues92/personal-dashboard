@@ -25,7 +25,6 @@ test('authenticated users can create a real national billing invoice through the
         'type' => 'national',
         'cnae' => '6201500',
         'cnae_annex' => 3,
-        'cnae_calculation' => 1,
         'customer_name' => 'ACME Brazil',
         'customer_external_id' => 'cust_001',
         'amount_brl' => 1500.75,
@@ -55,6 +54,7 @@ test('authenticated users can create a real national billing invoice through the
         ->assertJsonPath('data.type', 'national')
         ->assertJsonPath('data.is_simulation', false)
         ->assertJsonPath('data.amount_usd', null)
+        ->assertJsonPath('data.cnae_calculation', null)
         ->assertJsonPath('data.usd_brl_exchange_rate', null);
 
     $this->assertDatabaseHas('billing_invoices', [
@@ -73,7 +73,6 @@ test('web requests use the same controller and redirect after creating a billing
         'type' => 'national',
         'cnae' => '6201500',
         'cnae_annex' => 3,
-        'cnae_calculation' => 1,
         'customer_name' => 'ACME Brazil',
         'customer_external_id' => 'cust_001',
         'amount_brl' => 1500.75,
@@ -90,7 +89,6 @@ test('international invoices require usd fields', function () {
         'type' => 'international',
         'cnae' => '6201500',
         'cnae_annex' => 3,
-        'cnae_calculation' => 1,
         'customer_name' => 'ACME Global',
         'customer_external_id' => 'cust_002',
         'amount_brl' => 2200.00,
@@ -252,7 +250,7 @@ function realBillingInvoiceAttributes(array $overrides = []): array
         'type' => 'national',
         'cnae' => '6201500',
         'cnae_annex' => 3,
-        'cnae_calculation' => 1,
+        'cnae_calculation' => null,
         'customer_name' => 'ACME Brazil',
         'customer_external_id' => 'cust_001',
         'amount_brl' => 1500.75,

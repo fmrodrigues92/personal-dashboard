@@ -4,6 +4,7 @@ namespace App\Src\Billing\Contracts;
 
 use App\Models\BillingInvoice as BillingInvoiceModel;
 use App\Src\Billing\Domain\BillingInvoice;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 interface BillingInvoiceRepositoryInterface
@@ -28,6 +29,21 @@ interface BillingInvoiceRepositoryInterface
      * @return Collection<int, BillingInvoice>
      */
     public function getSimulations(): Collection;
+
+    /**
+     * @return Collection<int, BillingInvoiceModel>
+     */
+    public function getModelsForMonth(CarbonImmutable $referenceMonth): Collection;
+
+    /**
+     * @return Collection<int, BillingInvoiceModel>
+     */
+    public function getModelsForPeriod(CarbonImmutable $startDate, CarbonImmutable $endDate): Collection;
+
+    /**
+     * @param  array<int, int>  $calculationAnnexesById
+     */
+    public function updateCalculationAnnexes(array $calculationAnnexesById): void;
 
     public function delete(BillingInvoiceModel $billingInvoice): ?bool;
 
