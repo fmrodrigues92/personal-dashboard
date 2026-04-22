@@ -13,14 +13,45 @@ use App\Src\Das\UseCases\GetDasTimelineUseCase;
 use App\Src\Das\UseCases\ListDasCalculationsUseCase;
 use App\Src\Das\UseCases\ShowDasCalculationUseCase;
 use App\Src\Das\UseCases\UpdateDasTaxBreakdownUseCase;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class DasCalculationController extends Controller
 {
+    public function dashboard(
+        DasTimelineRequest $request,
+        GetDasTimelineUseCase $useCase,
+    ): JsonResponse|InertiaResponse {
+        $filters = $request->validated();
+        $items = $useCase->handle($filters);
+
+        if ($this->shouldReturnJson($request)) {
+            return response()->json([
+                'data' => $items,
+            ]);
+        }
+
+        $hasReferenceMonth = array_key_exists('reference_month', $filters);
+        $referenceMonth = isset($filters['reference_month'])
+            ? CarbonImmutable::parse($filters['reference_month'])->startOfMonth()
+            : CarbonImmutable::now()->startOfMonth();
+
+        return Inertia::render('dashboard', [
+            'initialTimeline' => $items,
+            'initialTimelineFilters' => [
+                'reference_month' => $referenceMonth->toDateString(),
+                'months_before' => (int) ($filters['months_before'] ?? ($hasReferenceMonth ? 0 : 12)),
+                'months_after' => (int) ($filters['months_after'] ?? ($hasReferenceMonth ? 0 : 12)),
+                'rule_version' => $filters['rule_version'] ?? null,
+            ],
+        ]);
+    }
+
     public function index(
         Request $request,
         ListDasCalculationsUseCase $useCase,

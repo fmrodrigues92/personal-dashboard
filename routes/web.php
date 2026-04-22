@@ -15,7 +15,7 @@ Route::group([
     'middleware' => ['auth', 'verified'],
 ], function () {
 
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', [DasCalculationController::class, 'dashboard'])->name('dashboard');
 
     Route::group([
         'as' => 'billing-invoices.',
