@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Billing\BillingInvoiceController;
 use App\Http\Controllers\Das\DasCalculationController;
+use App\Http\Controllers\ProLabore\ProLaboreController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -44,5 +45,18 @@ Route::group([
         Route::get('/', [DasCalculationController::class, 'index'])->name('index');
         Route::post('/', [DasCalculationController::class, 'store'])->name('store');
         Route::get('{dasCalculation}', [DasCalculationController::class, 'show'])->whereNumber('dasCalculation')->name('show');
+    });
+
+    Route::group([
+        'as' => 'pro-labore.',
+        'prefix' => 'pro-labore',
+    ], function () {
+
+        Route::get('/', [ProLaboreController::class, 'index'])->name('index');
+        Route::post('/', [ProLaboreController::class, 'store'])->name('store');
+        Route::delete('{proLaboreReceipt}', [ProLaboreController::class, 'destroy'])->whereNumber('proLaboreReceipt')->name('destroy');
+
+        Route::post('simulations', [ProLaboreController::class, 'storeSimulations'])->name('simulations.store');
+        Route::delete('simulations', [ProLaboreController::class, 'destroySimulations'])->name('simulations.destroy');
     });
 });

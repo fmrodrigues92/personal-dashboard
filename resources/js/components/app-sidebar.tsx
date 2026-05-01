@@ -1,5 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Receipt } from 'lucide-react';
+import {
+    BookOpen,
+    FolderGit2,
+    LayoutGrid,
+    Receipt,
+    WalletCards,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -40,6 +46,11 @@ export function AppSidebar() {
             title: 'Billing',
             href: '/billing-invoices',
             icon: Receipt,
+        },
+        {
+            title: 'Pro-labore',
+            href: '/pro-labore',
+            icon: WalletCards,
         },
     ];
 
