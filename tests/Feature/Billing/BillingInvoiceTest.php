@@ -2,6 +2,7 @@
 
 use App\Models\BillingInvoice;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
@@ -115,16 +116,14 @@ test('authenticated users can create billing invoice simulations in batch throug
         ->assertJsonPath('meta.created_count', 3)
         ->assertJsonCount(3, 'data');
 
-    expect(BillingInvoice::query()->count())->toBe(3);
+    expect(BillingInvoice::query()->count())->toBe(0);
 
     expect(
-        BillingInvoice::query()
-            ->orderBy('billing_date')
-            ->get()
-            ->map(fn (BillingInvoice $billingInvoice): array => [
-                'billing_date' => $billingInvoice->billing_date->format('Y-m-d H:i:s'),
-                'is_simulation' => $billingInvoice->is_simulation,
-                'amount_brl' => $billingInvoice->amount_brl,
+        collect($response->json('data'))
+            ->map(fn (array $billingInvoice): array => [
+                'billing_date' => CarbonImmutable::parse($billingInvoice['billing_date'])->format('Y-m-d H:i:s'),
+                'is_simulation' => $billingInvoice['is_simulation'],
+                'amount_brl' => $billingInvoice['amount_brl'],
             ])
             ->all()
     )->toBe([
@@ -170,9 +169,12 @@ test('authenticated users can list billing invoices through the api', function (
         'customer_external_id' => 'cust_101',
     ]));
 
-    BillingInvoice::query()->create(simulatedBillingInvoiceAttributes([
-        'billing_date' => '2026-03-01 00:00:00',
-    ]));
+    postJson(route('api.billing-invoices.simulations.store'), [
+        'type' => 'national',
+        'start_date' => '2026-03-01',
+        'end_date' => '2026-03-01',
+        'amount_brl' => 1000.00,
+    ])->assertCreated();
 
     $response = $this->getJson(route('api.billing-invoices.index'));
 
@@ -189,13 +191,12 @@ test('authenticated users can list only billing invoice simulations through the 
         'customer_external_id' => 'cust_201',
     ]));
 
-    BillingInvoice::query()->create(simulatedBillingInvoiceAttributes([
-        'billing_date' => '2026-01-01 00:00:00',
-    ]));
-
-    BillingInvoice::query()->create(simulatedBillingInvoiceAttributes([
-        'billing_date' => '2026-02-01 00:00:00',
-    ]));
+    postJson(route('api.billing-invoices.simulations.store'), [
+        'type' => 'national',
+        'start_date' => '2026-01-01',
+        'end_date' => '2026-02-01',
+        'amount_brl' => 1000.00,
+    ])->assertCreated();
 
     $response = $this->getJson(route('api.billing-invoices.simulations.index'));
 
@@ -246,13 +247,12 @@ test('users can not delete billing invoices that belong to another user', functi
 });
 
 test('deleting all simulations removes only simulated billing invoices', function () {
-    BillingInvoice::query()->create(simulatedBillingInvoiceAttributes([
-        'billing_date' => '2026-01-01 00:00:00',
-    ]));
-
-    BillingInvoice::query()->create(simulatedBillingInvoiceAttributes([
-        'billing_date' => '2026-02-01 00:00:00',
-    ]));
+    postJson(route('api.billing-invoices.simulations.store'), [
+        'type' => 'national',
+        'start_date' => '2026-01-01',
+        'end_date' => '2026-02-01',
+        'amount_brl' => 1000.00,
+    ])->assertCreated();
 
     BillingInvoice::query()->create(realBillingInvoiceAttributes([
         'customer_external_id' => 'cust_003',
@@ -266,7 +266,6 @@ test('deleting all simulations removes only simulated billing invoices', functio
         ->assertJsonPath('meta.deleted_count', 2);
 
     expect(BillingInvoice::query()->count())->toBe(1);
-    expect(BillingInvoice::query()->where('is_simulation', true)->count())->toBe(0);
     expect(BillingInvoice::query()->where('is_simulation', false)->count())->toBe(1);
 });
 

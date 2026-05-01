@@ -439,7 +439,7 @@ export default function TaxDashboard({
                                     No timeline items were returned for the selected period.
                                 </div>
                             ) : (
-                                <div className="flex gap-3 overflow-x-auto pb-2">
+                                <div className="flex gap-3 overflow-x-auto pb-6">
                                     {timeline.map((item) => {
                                         const isActive = item.reference_month === selectedMonth.reference_month;
                                         const isCurrentMonth = item.reference_month === currentReferenceMonth;

@@ -320,10 +320,22 @@ class DasCalculationService
         CarbonImmutable $referenceMonth,
         CarbonImmutable $currentMonth,
     ): Collection {
-        $shouldUseSimulations = $referenceMonth->greaterThan($currentMonth);
+        if ($referenceMonth->lessThan($currentMonth)) {
+            return $invoices
+                ->filter(fn ($billingInvoice): bool => ! $billingInvoice->is_simulation)
+                ->values();
+        }
+
+        $simulationInvoices = $invoices
+            ->filter(fn ($billingInvoice): bool => $billingInvoice->is_simulation)
+            ->values();
+
+        if ($simulationInvoices->isNotEmpty()) {
+            return $simulationInvoices;
+        }
 
         return $invoices
-            ->filter(fn ($billingInvoice): bool => $billingInvoice->is_simulation === $shouldUseSimulations)
+            ->filter(fn ($billingInvoice): bool => ! $billingInvoice->is_simulation)
             ->values();
     }
 
@@ -336,11 +348,17 @@ class DasCalculationService
         CarbonImmutable $currentMonth,
     ): Collection {
         return $invoices
-            ->filter(function ($billingInvoice) use ($currentMonth): bool {
-                $invoiceMonth = CarbonImmutable::instance($billingInvoice->billing_date)->startOfMonth();
-                $shouldUseSimulation = $invoiceMonth->greaterThan($currentMonth);
+            ->groupBy(fn ($billingInvoice): string => CarbonImmutable::instance($billingInvoice->billing_date)->startOfMonth()->toDateString())
+            ->flatMap(function (Collection $monthInvoices, string $invoiceMonth) use ($currentMonth): Collection {
+                if (CarbonImmutable::parse($invoiceMonth)->lessThan($currentMonth)) {
+                    return $monthInvoices->filter(fn ($billingInvoice): bool => ! $billingInvoice->is_simulation);
+                }
 
-                return $billingInvoice->is_simulation === $shouldUseSimulation;
+                $simulationInvoices = $monthInvoices->filter(fn ($billingInvoice): bool => $billingInvoice->is_simulation);
+
+                return $simulationInvoices->isNotEmpty()
+                    ? $simulationInvoices
+                    : $monthInvoices->filter(fn ($billingInvoice): bool => ! $billingInvoice->is_simulation);
             })
             ->values();
     }

@@ -133,6 +133,45 @@ test('past month das calculations ignore simulation invoices', function () {
         ->assertJsonPath('data.is_projection', false);
 });
 
+test('current month das timeline uses simulation invoices when they exist', function () {
+    $currentMonth = now()->startOfMonth();
+    $previousMonth = $currentMonth->subMonth();
+
+    BillingInvoice::query()->create([
+        'user_id' => $this->user->id,
+        'billing_date' => $previousMonth->copy()->day(10)->format('Y-m-d H:i:s'),
+        'type' => 'national',
+        'cnae' => '6201500',
+        'cnae_annex' => 3,
+        'cnae_calculation' => null,
+        'customer_name' => 'ACME Real',
+        'customer_external_id' => 'cust_real',
+        'amount_brl' => 10000.00,
+        'amount_usd' => null,
+        'usd_brl_exchange_rate' => null,
+        'is_simulation' => false,
+    ]);
+
+    postJson(route('api.billing-invoices.simulations.store'), [
+        'type' => 'national',
+        'start_date' => $currentMonth->toDateString(),
+        'end_date' => $currentMonth->toDateString(),
+        'amount_brl' => 10000.00,
+    ])->assertCreated();
+
+    $response = $this->getJson(route('api.das-calculations.timeline', [
+        'reference_month' => $currentMonth->toDateString(),
+    ]));
+
+    $response
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.reference_month', $currentMonth->toDateString())
+        ->assertJsonPath('data.0.monthly_revenue_brl', 10000)
+        ->assertJsonPath('data.0.das_total_brl', 600)
+        ->assertJsonPath('data.0.is_projection', true);
+});
+
 test('initial activity uses proportionalized rbt12 for the first month', function () {
     BillingInvoice::query()->create([
         'user_id' => $this->user->id,
@@ -324,20 +363,12 @@ test('authenticated users can get the das timeline', function () {
         'metadata' => ['invoice_count' => 1],
     ]);
 
-    BillingInvoice::query()->create([
-        'user_id' => $this->user->id,
-        'billing_date' => $currentMonth->addMonth()->day(10)->format('Y-m-d H:i:s'),
+    postJson(route('api.billing-invoices.simulations.store'), [
         'type' => 'national',
-        'cnae' => null,
-        'cnae_annex' => null,
-        'cnae_calculation' => null,
-        'customer_name' => null,
-        'customer_external_id' => null,
+        'start_date' => $currentMonth->addMonth()->toDateString(),
+        'end_date' => $currentMonth->addMonth()->toDateString(),
         'amount_brl' => 1000.00,
-        'amount_usd' => null,
-        'usd_brl_exchange_rate' => null,
-        'is_simulation' => true,
-    ]);
+    ])->assertCreated();
 
     $response = $this->getJson(route('api.das-calculations.timeline', [
         'reference_month' => $currentMonth->toDateString(),
